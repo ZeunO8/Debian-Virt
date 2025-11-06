@@ -72,7 +72,7 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -device virtio-blk-device,drive=hd0
               -device virtio-net-device,netdev=net0
               -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
-              -nographic
+              -vga virtio
       DEPENDS ${ARCH}-img
       USES_TERMINAL
       COMMENT "Booting ${ARCH} VM (virtio disk + network)"
