@@ -49,13 +49,15 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -kernel "${KERNEL_PATH}"
               -initrd "${INITRD_PATH}"
               -append "console=ttyAMA0"
-              -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
-              -cdrom "${ISO}"
+              -drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
+              -device virtio-blk-device,drive=hd0
+              -drive if=none,file="${ISO}",format=raw,readonly=on,id=cdrom0
+              -device virtio-blk-device,drive=cdrom0
               ${NET_OPTS}
               -nographic
       DEPENDS ${ARCH}-img ${ARCH}-extract
       USES_TERMINAL
-      COMMENT "Launching ${ARCH} installer (kernel+initrd)"
+      COMMENT "Launching ${ARCH} installer (kernel+initrd+ISO)"
     )
 
     add_custom_target(${ARCH}-run
