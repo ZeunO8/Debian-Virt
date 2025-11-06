@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(Debian-Virt VERSION 1.0 LANGUAGES NONE)
 
 # Network options
-set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
+set(ARM_NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
+set(I386_NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2224-:22 -net nic)
 
 # Function to download ISO files if missing
 function(download_iso_if_missing ISO_URL ISO_PATH)
@@ -18,7 +19,7 @@ endfunction()
 function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
   set(DISK_IMAGE "${CMAKE_BINARY_DIR}/debian13_${ARCH}.img")
   set(DISK_SIZE "10G")
-  set(VM_RAM "4096")
+  set(VM_RAM "3072")
   set(VM_CPUS "4")
 
   if("${ARCH}" STREQUAL "armhf")
@@ -97,7 +98,9 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
               -cdrom "${ISO}"
               -boot d
-              ${NET_OPTS}
+	      -cpu host
+	      -accel kvm
+	      ${I386_NET_OPTS}
       DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Launching ${ARCH} installer from ISO"
@@ -110,7 +113,9 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -smp ${VM_CPUS}
               -m ${VM_RAM}
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
-              ${NET_OPTS}
+	      -cpu host
+	      -accel kvm
+	      ${I386_NET_OPTS}
       DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Booting ${ARCH} VM"
@@ -144,8 +149,22 @@ add_custom_target(obos-run
           -m 2048
           -M q35
           -smp 1
-          -cpu Haswell
-          -accel whpx,kernel-irqchip=off
+          -cpu host
+          -accel kvm
+	  -nic none
   USES_TERMINAL
-  COMMENT "Booting OBOS (x86_64 hobby OS)"
+  COMMENT "Booting OBOS"
+)
+add_custom_target(obos-debug
+  COMMAND qemu-system-x86_64
+          -drive format=raw,file=${OBOS_ISO_PATH},media=disk,index=0
+          -m 2048
+          -M q35
+          -smp 1
+          -cpu host
+          -accel kvm
+	  -nic none
+	  -s -S
+  USES_TERMINAL
+  COMMENT "Booting OBOS (GDB Debug)"
 )
