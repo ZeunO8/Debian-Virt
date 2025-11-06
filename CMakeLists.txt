@@ -1,12 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(Debian-Virt VERSION 1.0 LANGUAGES NONE)
 
-# Network options depend on platform
-if(WIN32)
-  set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
-else()
-  set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
-endif()
+# Network options
+set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
 
 # Function for multi-arch QEMU setup
 function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
@@ -31,8 +27,8 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
 
   if("${BOOTMODE}" STREQUAL "KERNEL")
     set(EXTRACT_DIR "${CMAKE_BINARY_DIR}/${ARCH}-iso")
-    set(KERNEL_PATH "${EXTRACT_DIR}/install.arm/vmlinuz")
-    set(INITRD_PATH "${EXTRACT_DIR}/install.arm/initrd.gz")
+    set(KERNEL_PATH "${EXTRACT_DIR}/install.ahf/vmlinuz")
+    set(INITRD_PATH "${EXTRACT_DIR}/install.ahf/initrd.gz")
 
     add_custom_command(OUTPUT "${KERNEL_PATH}" "${INITRD_PATH}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${EXTRACT_DIR}"
