@@ -48,16 +48,43 @@ cmake --build build --target armhf-run
 cmake --build build --target i386-run
 ```
 
+### 4. Running OBOS
+
+The project also includes targets for running OBOS, an operating system developed by [Oberrow](https://github.com/OBOS-dev/obos):
+
+**Run OBOS:**
+```bash
+cmake --build build --target obos-run
+```
+
+**Run OBOS with GDB debugging:**
+```bash
+cmake --build build --target obos-debug
+```
+
+The OBOS ISO will be automatically downloaded during project configuration.
+
 ## Network Access
 
-SSH is available on localhost port 2223:
+SSH is available on localhost for Debian VMs:
+- **ARM (armhf):** Port 2223
+- **i386:** Port 2224
+
 ```bash
-ssh -p 2223 user@127.0.0.1
+ssh -p 2223 user@127.0.0.1  # For ARM
+ssh -p 2224 user@127.0.0.1  # For i386
 ```
 
 ## VM Configuration
 
+### Debian VMs
 - **Disk Size:** 10GB (qcow2 format)
-- **RAM:** 4096MB
+- **RAM:** 3072MB
 - **CPUs:** 4 cores
-- **Network:** User-mode networking with SSH port forwarding (2223 → 22)
+- **Network:** User-mode networking with SSH port forwarding
+
+### OBOS VM
+- **RAM:** 2048MB
+- **CPUs:** 1 core
+- **Acceleration:** KVM enabled
+- **Network:** Disabled
