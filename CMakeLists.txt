@@ -50,6 +50,7 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -initrd "${INITRD_PATH}"
               -append "console=ttyAMA0"
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
+              -cdrom "${ISO}"
               ${NET_OPTS}
               -nographic
       DEPENDS ${ARCH}-img ${ARCH}-extract
