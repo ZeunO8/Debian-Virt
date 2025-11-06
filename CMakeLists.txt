@@ -29,11 +29,12 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
 
   set(QEMU_IMG qemu-img)
 
-  add_custom_target(${ARCH}-img
+  # Only create disk if missing (safe)
+  add_custom_command(OUTPUT "${DISK_IMAGE}"
     COMMAND ${QEMU_IMG} create -f qcow2 "${DISK_IMAGE}" "${DISK_SIZE}"
-    BYPRODUCTS "${DISK_IMAGE}"
-    COMMENT "Creating ${ARCH} disk image"
+    COMMENT "Creating ${ARCH} disk image (only if missing)"
   )
+  add_custom_target(${ARCH}-img DEPENDS "${DISK_IMAGE}")
 
   if("${BOOTMODE}" STREQUAL "KERNEL")
     set(EXTRACT_DIR "${CMAKE_BINARY_DIR}/${ARCH}-iso")
@@ -49,7 +50,6 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
     )
     add_custom_target(${ARCH}-extract DEPENDS "${KERNEL_PATH}" "${INITRD_PATH}")
 
-    # ARM installer (kernel+initrd+ISO)
     add_custom_target(${ARCH}-install
       COMMAND ${QEMU_BIN}
               -M ${MACHINE}
@@ -66,12 +66,11 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -device virtio-net-device,netdev=net0
               -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
               -nographic
-      DEPENDS ${ARCH}-img ${ARCH}-extract
+      DEPENDS "${DISK_IMAGE}" ${ARCH}-extract
       USES_TERMINAL
       COMMENT "Launching ${ARCH} installer (kernel+initrd+ISO+network)"
     )
 
-    # ARM run target (boot installed system)
     add_custom_target(${ARCH}-run
       COMMAND ${QEMU_BIN}
               -M ${MACHINE}
@@ -83,12 +82,12 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -device virtio-net-device,netdev=net0
               -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
               -vga virtio
-      DEPENDS ${ARCH}-img
+      DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Booting ${ARCH} VM (virtio disk + network)"
     )
 
-  else()  # x86 ISO-based boot
+  else()
     add_custom_target(${ARCH}-install
       COMMAND ${QEMU_BIN}
               -M ${MACHINE}
@@ -99,7 +98,7 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -cdrom "${ISO}"
               -boot d
               ${NET_OPTS}
-      DEPENDS ${ARCH}-img
+      DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Launching ${ARCH} installer from ISO"
     )
@@ -112,7 +111,7 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -m ${VM_RAM}
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
               ${NET_OPTS}
-      DEPENDS ${ARCH}-img
+      DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Booting ${ARCH} VM"
     )
@@ -122,15 +121,31 @@ endfunction()
 # ISO URLs
 set(ARMHF_ISO_URL "https://cdimage.debian.org/debian-cd/current/armhf/iso-cd/debian-13.1.0-armhf-netinst.iso")
 set(I386_ISO_URL  "https://cdimage.debian.org/mirror/cdimage/archive/12.1.0/i386/iso-cd/debian-12.1.0-i386-netinst.iso")
+set(OBOS_ISO_URL  "http://obos-dev.ddns.net/images/obos-full.iso")
 
 # ISO paths
 set(ARMHF_ISO_PATH "${CMAKE_SOURCE_DIR}/debian-13.1.0-armhf-netinst.iso")
 set(I386_ISO_PATH  "${CMAKE_SOURCE_DIR}/debian-12.1.0-i386-netinst.iso")
+set(OBOS_ISO_PATH  "${CMAKE_SOURCE_DIR}/obos-full.iso")
 
 # Download missing ISOs
 download_iso_if_missing(${ARMHF_ISO_URL} ${ARMHF_ISO_PATH})
 download_iso_if_missing(${I386_ISO_URL} ${I386_ISO_PATH})
+download_iso_if_missing(${OBOS_ISO_URL} ${OBOS_ISO_PATH})
 
 # Create VM targets
 create_vm_targets(armhf ${ARMHF_ISO_PATH} "cortex-a15" "virt" "KERNEL")
 create_vm_targets(i386  ${I386_ISO_PATH}  "pentium"    "pc"    "ISO")
+
+# OBOS hobby OS target addition
+add_custom_target(obos-run
+  COMMAND qemu-system-x86_64
+          -drive format=raw,file=${OBOS_ISO_PATH},media=disk,index=0
+          -m 2048
+          -M q35
+          -smp 1
+          -cpu Haswell
+          -accel whpx,kernel-irqchip=off
+  USES_TERMINAL
+  COMMENT "Booting OBOS (x86_64 hobby OS)"
+)
