@@ -4,7 +4,7 @@ project(Debian-Virt VERSION 1.0 LANGUAGES NONE)
 if(WIN32)
   set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
 else()
-  set(NET_OPTS "-net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic")
+  set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
 endif()
 
 function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
