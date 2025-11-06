@@ -4,6 +4,16 @@ project(Debian-Virt VERSION 1.0 LANGUAGES NONE)
 # Network options
 set(NET_OPTS -net user,hostfwd=tcp:127.0.0.1:2223-:22 -net nic)
 
+# Function to download ISO files if missing
+function(download_iso_if_missing ISO_URL ISO_PATH)
+  if(NOT EXISTS ${ISO_PATH})
+    message(STATUS "Downloading ${ISO_URL} -> ${ISO_PATH}")
+    file(DOWNLOAD ${ISO_URL} ${ISO_PATH} SHOW_PROGRESS)
+  else()
+    message(STATUS "Found existing ISO: ${ISO_PATH}")
+  endif()
+endfunction()
+
 # Function for multi-arch QEMU setup
 function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
   set(DISK_IMAGE "${CMAKE_BINARY_DIR}/debian13_${ARCH}.img")
@@ -109,8 +119,18 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
   endif()
 endfunction()
 
-# ARMHF (kernel/initrd + virt machine)
-create_vm_targets(armhf "${CMAKE_SOURCE_DIR}/debian-13.1.0-armhf-netinst.iso" "cortex-a15" "virt" "KERNEL")
+# ISO URLs
+set(ARMHF_ISO_URL "https://cdimage.debian.org/debian-cd/current/armhf/iso-cd/debian-13.1.0-armhf-netinst.iso")
+set(I386_ISO_URL  "https://cdimage.debian.org/mirror/cdimage/archive/12.1.0/i386/iso-cd/debian-12.1.0-i386-netinst.iso")
 
-# i386 (BIOS/UEFI ISO install)
-create_vm_targets(i386  "${CMAKE_SOURCE_DIR}/debian-12.1.0-i386-netinst.iso"   "pentium"    "pc"    "ISO")
+# ISO paths
+set(ARMHF_ISO_PATH "${CMAKE_SOURCE_DIR}/debian-13.1.0-armhf-netinst.iso")
+set(I386_ISO_PATH  "${CMAKE_SOURCE_DIR}/debian-12.1.0-i386-netinst.iso")
+
+# Download missing ISOs
+download_iso_if_missing(${ARMHF_ISO_URL} ${ARMHF_ISO_PATH})
+download_iso_if_missing(${I386_ISO_URL} ${I386_ISO_PATH})
+
+# Create VM targets
+create_vm_targets(armhf ${ARMHF_ISO_PATH} "cortex-a15" "virt" "KERNEL")
+create_vm_targets(i386  ${I386_ISO_PATH}  "pentium"    "pc"    "ISO")
