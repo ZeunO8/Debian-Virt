@@ -73,19 +73,23 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
     )
 
     add_custom_target(${ARCH}-run
-      COMMAND ${QEMU_BIN}
-              -M ${MACHINE}
-              -cpu ${CPU}
-              -smp ${VM_CPUS}
-              -m ${VM_RAM}
-              -drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
-              -device virtio-blk-device,drive=hd0
-              -device virtio-net-device,netdev=net0
-              -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
-              -vga virtio
-      DEPENDS "${DISK_IMAGE}"
-      USES_TERMINAL
-      COMMENT "Booting ${ARCH} VM (virtio disk + network)"
+	COMMAND ${QEMU_BIN}
+        	-M ${MACHINE}
+		-cpu ${CPU}
+		-smp ${VM_CPUS}
+		-m ${VM_RAM}
+             	-kernel "${KERNEL_PATH}"
+	        -initrd "${INITRD_PATH}"
+          	-append "root=/dev/vda2 rw console=ttyAMA0"
+          	-drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
+          	-device virtio-blk-device,drive=hd0
+          	-device virtio-net-device,netdev=net0
+          	-netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
+          	-device virtio-gpu-device
+          	-display gtk,gl=off
+  	DEPENDS "${DISK_IMAGE}" ${ARCH}-extract
+  	USES_TERMINAL
+  	COMMENT "Booting ${ARCH} VM (installer kernel, installed rootfs)"
     )
 
   else()
