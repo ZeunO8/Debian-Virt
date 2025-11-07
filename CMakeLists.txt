@@ -41,6 +41,7 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
     set(EXTRACT_DIR "${CMAKE_BINARY_DIR}/${ARCH}-iso")
     set(KERNEL_PATH "${EXTRACT_DIR}/install.ahf/vmlinuz")
     set(INITRD_PATH "${EXTRACT_DIR}/install.ahf/initrd.gz")
+    set(EFI_BIOS "${CMAKE_SOURCE_DIR}/efi/ARM32_QEMU_EFI.fd")
 
     add_custom_command(OUTPUT "${KERNEL_PATH}" "${INITRD_PATH}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${EXTRACT_DIR}"
@@ -51,45 +52,43 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
     )
     add_custom_target(${ARCH}-extract DEPENDS "${KERNEL_PATH}" "${INITRD_PATH}")
 
+    # ARM EFI installer
     add_custom_target(${ARCH}-install
       COMMAND ${QEMU_BIN}
               -M ${MACHINE}
               -cpu ${CPU}
               -smp ${VM_CPUS}
               -m ${VM_RAM}
-              -kernel "${KERNEL_PATH}"
-              -initrd "${INITRD_PATH}"
-              -append "console=ttyAMA0"
+              -bios ${EFI_BIOS}
               -drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
               -device virtio-blk-device,drive=hd0
-              -drive if=none,file="${ISO}",format=raw,readonly=on,id=cdrom0
-              -device virtio-blk-device,drive=cdrom0
+              -cdrom "${ISO}"
               -device virtio-net-device,netdev=net0
               -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
-              -nographic
+              -device virtio-gpu-device
+              -display gtk,gl=off
       DEPENDS "${DISK_IMAGE}" ${ARCH}-extract
       USES_TERMINAL
-      COMMENT "Launching ${ARCH} installer (kernel+initrd+ISO+network)"
+      COMMENT "Launching ${ARCH} installer (EFI firmware + ISO + virtio)"
     )
 
+    # ARM EFI boot target
     add_custom_target(${ARCH}-run
-	COMMAND ${QEMU_BIN}
-        	-M ${MACHINE}
-		-cpu ${CPU}
-		-smp ${VM_CPUS}
-		-m ${VM_RAM}
-             	-kernel "${KERNEL_PATH}"
-	        -initrd "${INITRD_PATH}"
-          	-append "root=/dev/vda2 rw console=ttyAMA0"
-          	-drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
-          	-device virtio-blk-device,drive=hd0
-          	-device virtio-net-device,netdev=net0
-          	-netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
-          	-device virtio-gpu-device
-          	-display gtk,gl=off
-  	DEPENDS "${DISK_IMAGE}" ${ARCH}-extract
-  	USES_TERMINAL
-  	COMMENT "Booting ${ARCH} VM (installer kernel, installed rootfs)"
+      COMMAND ${QEMU_BIN}
+              -M ${MACHINE}
+              -cpu ${CPU}
+              -smp ${VM_CPUS}
+              -m ${VM_RAM}
+              -bios ${EFI_BIOS}
+              -drive if=none,file="${DISK_IMAGE}",format=qcow2,id=hd0
+              -device virtio-blk-device,drive=hd0
+              -device virtio-net-device,netdev=net0
+              -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22
+              -device virtio-gpu-device
+              -display gtk,gl=off
+      DEPENDS "${DISK_IMAGE}"
+      USES_TERMINAL
+      COMMENT "Booting ${ARCH} VM (EFI boot, virtio devices)"
     )
 
   else()
@@ -102,9 +101,9 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
               -cdrom "${ISO}"
               -boot d
-	      -cpu host
-	      -accel kvm
-	      ${I386_NET_OPTS}
+              -cpu host
+              -accel kvm
+              ${I386_NET_OPTS}
       DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Launching ${ARCH} installer from ISO"
@@ -117,9 +116,9 @@ function(create_vm_targets ARCH ISO CPU MACHINE BOOTMODE)
               -smp ${VM_CPUS}
               -m ${VM_RAM}
               -drive file="${DISK_IMAGE}",if=virtio,format=qcow2
-	      -cpu host
-	      -accel kvm
-	      ${I386_NET_OPTS}
+              -cpu host
+              -accel kvm
+              ${I386_NET_OPTS}
       DEPENDS "${DISK_IMAGE}"
       USES_TERMINAL
       COMMENT "Booting ${ARCH} VM"
@@ -155,7 +154,7 @@ add_custom_target(obos-run
           -smp 1
           -cpu host
           -accel kvm
-	  -nic none
+          -nic none
   USES_TERMINAL
   COMMENT "Booting OBOS"
 )
@@ -167,8 +166,8 @@ add_custom_target(obos-debug
           -smp 1
           -cpu host
           -accel kvm
-	  -nic none
-	  -s -S
+          -nic none
+          -s -S
   USES_TERMINAL
   COMMENT "Booting OBOS (GDB Debug)"
 )
